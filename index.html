@@ -1,17 +1,166 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Block Dodge Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Block Shooter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    margin: 0;
+    background: radial-gradient(circle at top, #111827, #020617);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: white;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    background: linear-gradient(180deg, #020617, #0f172a);
+    border-radius: 12px;
+    box-shadow: 0 0 25px #38bdf8;
+  }
+</style>
 </head>
 <body>
 
-<h2>Block Dodge</h2>
-<div id="game"></div>
+<canvas id="game" width="360" height="600"></canvas>
 
-<script src="game.js"></script>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let score = 0;
+let gameOver = false;
+
+const player = {
+  x: canvas.width / 2 - 20,
+  y: canvas.height - 60,
+  size: 40,
+  speed: 6
+};
+
+const bullets = [];
+const enemies = [];
+
+function drawPlayer() {
+  ctx.fillStyle = "#22d3ee";
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+}
+
+function drawBullets() {
+  ctx.fillStyle = "#facc15";
+  bullets.forEach(b => {
+    b.y -= b.speed;
+    ctx.fillRect(b.x, b.y, 6, 14);
+  });
+}
+
+function drawEnemies() {
+  ctx.fillStyle = "#fb7185";
+  enemies.forEach(e => {
+    e.y += e.speed;
+    ctx.fillRect(e.x, e.y, e.size, e.size);
+  });
+}
+
+function spawnEnemy() {
+  enemies.push({
+    x: Math.random() * (canvas.width - 30),
+    y: -30,
+    size: 30,
+    speed: 2 + Math.random() * 2
+  });
+}
+
+function shoot() {
+  bullets.push({
+    x: player.x + player.size / 2 - 3,
+    y: player.y,
+    speed: 7
+  });
+}
+
+function collision(a, b) {
+  return a.x < b.x + b.size &&
+         a.x + a.size > b.x &&
+         a.y < b.y + b.size &&
+         a.y + a.size > b.y;
+}
+
+function update() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!gameOver) {
+    drawPlayer();
+    drawBullets();
+    drawEnemies();
+
+    // Bullet vs Enemy
+    bullets.forEach((b, bi) => {
+      enemies.forEach((e, ei) => {
+        if (
+          b.x < e.x + e.size &&
+          b.x + 6 > e.x &&
+          b.y < e.y + e.size &&
+          b.y + 14 > e.y
+        ) {
+          bullets.splice(bi, 1);
+          enemies.splice(ei, 1);
+          score++;
+        }
+      });
+    });
+
+    // Enemy vs Player
+    enemies.forEach(e => {
+      if (collision(player, e)) {
+        gameOver = true;
+      }
+    });
+
+    // Remove offscreen
+    enemies.forEach((e, i) => {
+      if (e.y > canvas.height) enemies.splice(i, 1);
+    });
+
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Score: " + score, 10, 30);
+
+    requestAnimationFrame(update);
+  } else {
+    ctx.fillStyle = "white";
+    ctx.font = "28px Arial";
+    ctx.fillText("GAME OVER", 90, 280);
+    ctx.font = "18px Arial";
+    ctx.fillText("Tap to Restart", 110, 320);
+  }
+}
+
+// Controls
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft" && player.x > 0) player.x -= player.speed;
+  if (e.key === "ArrowRight" && player.x < canvas.width - player.size)
+    player.x += player.speed;
+  if (e.key === " " && !gameOver) shoot();
+});
+
+canvas.addEventListener("touchstart", e => {
+  const touchX = e.touches[0].clientX;
+  if (touchX < window.innerWidth / 2) player.x -= player.speed * 2;
+  else player.x += player.speed * 2;
+  if (!gameOver) shoot();
+  if (gameOver) location.reload();
+});
+
+// Enemy spawn
+setInterval(() => {
+  if (!gameOver) spawnEnemy();
+}, 900);
+
+update();
+</script>
+
 </body>
-</html>
+  </html>
